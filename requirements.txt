@@ -1,0 +1,8 @@
+python-telegram-bot==20.8
+requests
+firebase-admin
+aiohttp
+python-dotenv
+nest_asyncio
+python-telegram-bot[job-queue]
+
