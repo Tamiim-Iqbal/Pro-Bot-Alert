@@ -1,5 +1,6 @@
 import logging
 import os
+import json
 import requests
 import firebase_admin
 from firebase_admin import credentials, db
@@ -12,7 +13,7 @@ load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
 
 # Firebase initialization
-cred = credentials.Certificate("firebase_creds.json")
+cred = credentials.Certificate(json.loads(os.environ['GOOGLE_CREDENTIALS']))
 firebase_admin.initialize_app(cred, {
     'databaseURL': os.getenv("FIREBASE_DB_URL")
 })
