@@ -689,24 +689,24 @@ async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if not access["users"]:
-        users_msg = "<b> No approved users. </b>\n"
+        users_msg = "<b>No approved users. </b>\n"
     else:
-        users_msg = "<b> Approved Users: </b>\n\n"
+        users_msg = "<b>Approved Users: </b>\n\n"
         for uid, data in access["users"].items():
             users_msg += f"- {data.get('username', 'Unknown')} (ID: {uid})\n"
             users_msg += f"  Coins: {', '.join([c.upper() for c in data['coins']])}\n"
     
     if not access["requests"]:
-        requests_msg = "\n<b>No pending access requests.</b>"
+        requests_msg = "<b>No pending access requests.</b>\n"
     else:
-        requests_msg = "\n<b> Pending Access Requests:</b>\n\n"
+        requests_msg = "<b> Pending Access Requests:</b>\n\n"
         for req in access["requests"]:
             requests_msg += f"- {req['username']} (ID: {req['user_id']})\n"
     
     if not access["coin_requests"]:
-        coin_requests_msg = "\n<b>No pending coin requests.</b>"
+        coin_requests_msg = "<b>No pending coin requests.</b>\n"
     else:
-        coin_requests_msg = "\n<b>Pending Coin Requests:</b>n"
+        coin_requests_msg = "<b>Pending Coin Requests:</b>\n"
         for req in access["coin_requests"]:
             coin_requests_msg += f"- {req['username']} (ID: {req['user_id']}) for {req['coin'].upper()}\n"
     
