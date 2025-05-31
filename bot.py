@@ -211,53 +211,58 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 #############################################################################################
 async def remove_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     access = load_access()
+
+    # Only owner can execute this
     if str(update.effective_user.id) != access.get("owner"):
-        await update.message.reply_text("Unauthorized.")
+        await update.message.reply_text("❌ Unauthorized. Only the owner can remove users.")
         return
 
+    # Check if USER_ID is provided
     if not context.args:
         await update.message.reply_text("Usage: /remove_user <USER_ID>")
         return
 
     user_id = context.args[0]
+
     if user_id in access["users"]:
         del access["users"][user_id]
         save_access(access)
-        await update.message.reply_text(f"User {user_id} removed.")
+        await update.message.reply_text(f"✅ User {user_id} removed successfully.")
     else:
-        await update.message.reply_text(f"User {user_id} not found.")
+        await update.message.reply_text(f"⚠️ User {user_id} not found.")
+
+
+# remove coin       
 async def remove_coin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    access = load_access()
+
+    if str(update.effective_user.id) != access.get("owner"):
+        await update.message.reply_text("❌ Only owner can remove coins.")
+        return
+
     if len(context.args) < 2:
         await update.message.reply_text("Usage: /remove_coin <USER_ID> <COIN>")
         return
 
     user_id = context.args[0]
-    coin = context.args[1].upper()
+    coin = context.args[1].lower()
 
-    if str(update.effective_user.id) != OWNER_ID:
-        await update.message.reply_text("Unauthorized.")
+    if user_id not in access["users"]:
+        await update.message.reply_text(f"User {user_id} not found.")
         return
 
-    if not os.path.exists(ALERT_FILE):
-        await update.message.reply_text("No alerts found.")
-        return
+    user_data = access["users"][user_id]
+    coins = user_data.get("coins", [])
 
-    with open(ALERT_FILE, 'r') as f:
-        alerts = json.load(f)
-
-    if user_id not in alerts:
-        await update.message.reply_text(f"No alerts for user {user_id}.")
-        return
-
-    old_alerts = alerts[user_id]
-    alerts[user_id] = [a for a in old_alerts if a.get("symbol", "").upper() != coin]
-
-    if len(alerts[user_id]) < len(old_alerts):
-        with open(ALERT_FILE, 'w') as f:
-            json.dump(alerts, f, indent=2)
-        await update.message.reply_text(f"Removed {coin} from user {user_id}.")
+    if coin in coins:
+        coins.remove(coin)
+        user_data["coins"] = coins
+        save_access(access)
+        await update.message.reply_text(f"{coin.upper()} removed from user {user_id}'s coin access.")
     else:
-        await update.message.reply_text(f"{coin} not found for user {user_id}.")
+        await update.message.reply_text(f"{coin.upper()} not found in user {user_id}'s allowed coins.")
+
+
 
 #############################################################################################
 # Help command
