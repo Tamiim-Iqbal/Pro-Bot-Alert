@@ -5,6 +5,7 @@ import asyncio
 import psutil
 import signal
 from telegram import Update
+from telegram.error import Conflict
 from telegram.ext import ContextTypes
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
@@ -792,7 +793,13 @@ async def main():
     
     try:
         app = ApplicationBuilder().token(BOT_TOKEN).build()
-        
+        try:
+            # Test if this token is already in use
+            me = await app.bot.get_me()
+            print(f"✅ Running as @{me.username}")
+        except Conflict as e:
+            print("❌ Bot already running elsewhere. Exiting.")
+            return
         # Add command handlers
         commands = [
             ("start", start),
