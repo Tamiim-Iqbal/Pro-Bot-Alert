@@ -821,26 +821,21 @@ async def main():
         app.job_queue.run_repeating(check_prices, interval=15, first=5)
         asyncio.create_task(ping_self())
         
-        # Start bot
-        print("🤖 Bot is running...")
-        
-        
-        # Notify owner
+        # Notify owner bot started
         try:
             await app.bot.send_message(chat_id=OWNER_ID, text="🤖 Bot started successfully!")
         except Exception as e:
             print(f"Owner notification failed: {e}")
-        await app.run_polling()
-        # Keep running
-        while True:
-            await asyncio.sleep(3600)
-            
+        
+        print("✅ Bot is running...")
+        await app.run_polling()  # runs forever until interrupted
+
     except Exception as e:
         print(f"🔥 Error: {e}")
+    
     finally:
-        if 'app' in locals():
-            await app.stop()
-        print("🤖 Bot stopped")
+        print("🛑 Bot stopped.")
+
 
 if __name__ == "__main__":
     # Install required packages if not already installed
@@ -850,10 +845,17 @@ if __name__ == "__main__":
     except ImportError:
         import subprocess
         subprocess.run(["pip", "install", "psutil", "nest-asyncio"])
-    
-    try:
-        asyncio.run(main())
-    except RuntimeError:
+        import psutil
         import nest_asyncio
-        nest_asyncio.apply()
-        asyncio.run(main())
+
+    # Apply nest_asyncio to allow reusing the event loop
+    nest_asyncio.apply()
+
+    import asyncio
+
+    try:
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(main())
+    except Exception as e:
+        print(f"❌ Failed to run bot: {e}")
+
