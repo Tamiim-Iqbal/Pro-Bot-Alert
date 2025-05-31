@@ -10,6 +10,7 @@ from firebase_admin import credentials, firestore
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
 import json
+import sys
 
 # Load .env variables
 load_dotenv()
@@ -36,6 +37,7 @@ db = firestore.client()
 
 ADMINS = ["5817239686"]  # Replace with your Telegram user ID(s) as string(s)
 
+# Apply nest_asyncio in case of existing running loop (e.g. Jupyter)
 nest_asyncio.apply()
 
 # Firestore collections
@@ -64,7 +66,7 @@ async def ping_self():
             print("Ping failed:", e)
         await asyncio.sleep(300)
 
-# Telegram commands ...
+# Telegram command handlers
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
@@ -159,7 +161,15 @@ async def main():
     await app.run_polling()
 
 if __name__ == "__main__":
-    # If you are running in an environment with an existing event loop (like Jupyter),
-    # you might want to use: asyncio.run(main())
-    # or, in those environments, use nest_asyncio and run main directly:
-    asyncio.run(main())
+    if sys.platform == "win32":
+        # Fix for Windows event loop policy
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+    try:
+        asyncio.run(main())
+    except RuntimeError as e:
+        print(f"RuntimeError: {e}")
+        # Likely running in a notebook or environment with a running event loop
+        import nest_asyncio
+        nest_asyncio.apply()
+        asyncio.get_event_loop().run_until_complete(main())
