@@ -6,7 +6,7 @@ import asyncio
 import psutil
 import signal
 from telegram import Update
-from telegram.ext import ContextTypes
+from telegram.ext import CommandHandler, ContextTypes
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
 from telegram import Update
@@ -173,7 +173,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "👋 <b>Welcome to Crypto Alert Bot! </b>\n\n"
             "Use <b>/add COIN PRICE</b> or <b>/add COIN PRICE below</b> - to set a price alert.\n\n"
-            "<b>Examples:</b>\n"
+            "<b>Examples:</b>\n\n"
             "<b>/add BTC 100000</b> - alert if price goes above 100000\n"
             "<b>/add BTC 100000 below</b> - alert if price drops below 100000\n"
             "\n📌 <b>Owner Commands:</b>\n\n"
@@ -239,7 +239,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     owner_help = ""
     if is_owner:
         owner_help = (
-            "\n📌 <b>Owner Commands:</b>\n"
+            "\n📌 <b>Owner Commands:</b>\n\n"
             "<b>/approve USER_ID</b> - Approve user\n"
             "<b>/decline USER_ID</b> - Decline user\n"
             "<b>/approve_coin USER_ID COIN</b> - Approve coin\n"
@@ -693,63 +693,12 @@ async def coin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Now add all available coins for everyone at the bottom
     all_coins_list = "\n".join([f"• {k.upper()} ({v})" for k, v in SYMBOL_MAP.items()])
-    reply_lines.append(f"\n<b>🌐 All Available Coins:</b>\n{all_coins_list}")
+    reply_lines.append(f"\n<b>🌐 All Available Coins:</b>\n\n{all_coins_list}")
 
     await update.message.reply_text("\n".join(reply_lines), parse_mode="HTML")
 
 
 # ========== PRICE COMMAND ==========
-# async def get_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
-#     user_id = str(update.effective_user.id)
-#     access = load_access()
-    
-#     if user_id != access["owner"] and user_id not in access["users"]:
-#         await update.message.reply_text("❌ You are not authorized to use this bot.\nUse <b>/request </b> to ask for access.",parse_mode="HTML")    
-#         return
-    
-#     if not context.args:
-#         await update.message.reply_text("❗ Usage: <b>/price COIN [COIN2 ...] </b>")
-#         return
-    
-#     symbols = [s.lower() for s in context.args]
-    
-#     if user_id != access["owner"]:
-#         accessible_coins = access["users"][user_id]["coins"]
-#         unauthorized = [s for s in symbols if s not in accessible_coins]
-#         if unauthorized:
-#             await update.message.reply_text(
-#                 f"❌ No access to: {', '.join([c.upper() for c in unauthorized])}\n"
-#                 f"Use <b>/request_coin COIN </b> to request access."
-#             )
-#             return
-    
-#     unknown = [s for s in symbols if s not in SYMBOL_MAP]
-#     if unknown:
-#         await update.message.reply_text(f"❗ Unknown coin(s): {', '.join(unknown)}")
-#         return
-    
-#     ids = [SYMBOL_MAP[s] for s in symbols]
-#     try:
-#         res = requests.get(
-#             "https://api.coingecko.com/api/v3/simple/price",
-#             params={"ids": ",".join(ids), "vs_currencies": "usd"},
-#             timeout=10
-#         ).json()
-        
-#         lines = []
-#         for s in symbols:
-#             price = res.get(SYMBOL_MAP[s], {}).get("usd")
-#             if price is not None:
-#                 lines.append(f"💰 {s.upper()}: ${price:.5f}")
-#             else:
-#                 lines.append(f"⚠️ {s.upper()}: Price not found. Try again later.")
-#         await update.message.reply_text("\n".join(lines))
-#     except Exception as e:
-#         print("Error fetching prices:", e)
-#         await update.message.reply_text("⚠️ Failed to fetch prices. Try again later.")
-
-# async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-#     await update.message.reply_text("❌ Unknown command. Use <b>/help</b> - to see all available commands.")
 
 async def get_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
@@ -875,6 +824,56 @@ async def check_prices(context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         print(f"Price check error: {e}")
 
+
+
+###################################
+def load_access():
+    if os.path.exists(ACCESS_FILE):
+        with open(ACCESS_FILE, 'r') as f:
+            return json.load(f)
+    return []
+
+def save_access(access_list):
+    with open(ACCESS_FILE, 'w') as f:
+        json.dump(access_list, f)
+
+async def add_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if str(update.effective_user.id) != OWNER_ID:
+        await update.message.reply_text("Unauthorized.")
+        return
+
+    if not context.args:
+        await update.message.reply_text("Usage: /add_user <USER_ID>")
+        return
+
+    user_id = context.args[0]
+    access_list = load_access()
+    if user_id not in access_list:
+        access_list.append(user_id)
+        save_access(access_list)
+        await update.message.reply_text(f"User {user_id} added.")
+    else:
+        await update.message.reply_text(f"User {user_id} already has access.")
+
+async def remove_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if str(update.effective_user.id) != OWNER_ID:
+        await update.message.reply_text("Unauthorized.")
+        return
+
+    if not context.args:
+        await update.message.reply_text("Usage: /remove_user <USER_ID>")
+        return
+
+    user_id = context.args[0]
+    access_list = load_access()
+    if user_id in access_list:
+        access_list.remove(user_id)
+        save_access(access_list)
+        await update.message.reply_text(f"User {user_id} removed.")
+    else:
+        await update.message.reply_text(f"User {user_id} not found.")
+
+##################################
 # ========== SELF-PINGING ==========
 async def ping_self():
     while True:
@@ -914,7 +913,9 @@ async def main():
             ("list", list_alerts),
             ("remove", remove_alert),
             ("coin", coin_command),
-            ("price", get_price)
+            ("price", get_price),
+            ("add_user", add_user),
+            ("remove_user", remove_user)
         ]
         
         for cmd, handler in commands:
