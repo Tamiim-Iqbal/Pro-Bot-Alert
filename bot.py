@@ -256,9 +256,9 @@ async def remove_coin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         coins.remove(coin)
         user_data["coins"] = coins
         save_access(access)
-        await update.message.reply_text(f"<b>{coin.upper()}</b> removed from user <b>{user_id}</b>'s coin access.")
+        await update.message.reply_text(f"<b>{coin.upper()}</b> removed from user <b>{user_id}</b>'s coin access.",parse_mode="HTML")
     else:
-        await update.message.reply_text(f"<b>{coin.upper()}</b> not found in user <b>{user_id}</b>'s allowed coins.")
+        await update.message.reply_text(f"<b>{coin.upper()}</b> not found in user <b>{user_id}</b>'s allowed coins.",parse_mode="HTML")
 
 # Help command
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -266,10 +266,9 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     access = load_access()
 
     is_owner = user_id == access["owner"]
-    has_access = user_id in access["users"]
 
-    if not has_access and not is_owner:
-        basic_help += "❌ You are not authorized to use this bot.\nUse <b>/request </b> to ask for access."
+    if user_id != access["owner"] and user_id not in access["users"]:
+        await update.message.reply_text("❌ You are not authorized to use this bot.\nUse <b>/request </b> to ask for access.",parse_mode="HTML")
         return
     
     basic_help = (
@@ -733,7 +732,7 @@ async def add_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if user_id != access["owner"] and symbol not in access["users"][user_id]["coins"]:
-        await update.message.reply_text(f"❌ No access to {symbol.upper()}. Use <b>/request_coin {symbol} </b> to request access.")
+        await update.message.reply_text(f"❌ No access to <b>{symbol.upper()}.</b> Use <b>/request_coin {symbol} </b> to request access.",parse_mode="HTML")
         return
     
     try:
@@ -817,6 +816,10 @@ async def remove_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def coin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     access = load_access()
+
+    if user_id != access["owner"] and user_id not in access["users"]:
+        await update.message.reply_text("❌ You are not authorized to use this bot.\nUse <b>/request </b> to ask for access.",parse_mode="HTML")
+        return
     
     reply_lines = []
 
@@ -829,9 +832,7 @@ async def coin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         coins_list = "\n".join([f"• {c.upper()} ({SYMBOL_MAP.get(c, 'Unknown')})" for c in accessible_coins])
         reply_lines.append(f"<b>📊 Your Coins:</b>\n\n{coins_list}")
         reply_lines.append("\nUse <b>/request_coin COIN </b> to request more coins.")
-    else:
-        accessible_coins = []
-        reply_lines.append("\n❌ You are not authorized to use this bot.\nUse <b>/request </b> to ask for access.", parse_mode="HTML")
+    
 
     # Now add all available coins for everyone at the bottom
     all_coins_list = "\n".join([f"• {k.upper()} ({v})" for k, v in SYMBOL_MAP.items()])
