@@ -5,6 +5,7 @@ import asyncio
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from dotenv import load_dotenv
+import firebase_admin
 from firebase_admin import credentials, firestore, initialize_app
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
@@ -26,9 +27,12 @@ cred_json = os.getenv("FIREBASE_CREDENTIALS")
 if not cred_json:
     raise Exception("Missing FIREBASE_CREDENTIALS environment variable")
 
+# Parse JSON string and initialize Firebase
 cred_dict = json.loads(cred_json)
 cred = credentials.Certificate(cred_dict)
-initialize_app(cred)
+firebase_admin.initialize_app(cred)
+
+# Initialize Firestore
 db = firestore.client()
 
 ADMINS = ["your_telegram_user_id"]  # Replace with your Telegram ID (as string)
