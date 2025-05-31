@@ -68,30 +68,6 @@ def save_symbol_map(data):
 # Replace the hardcoded SYMBOL_MAP with:
 SYMBOL_MAP = load_symbol_map()
 
-####################################
-def load_access():
-    if os.path.exists(ACCESS_FILE):
-        with open(ACCESS_FILE, 'r') as f:
-            return json.load(f)
-    return []
-
-def save_access(access_list):
-    with open(ACCESS_FILE, 'w') as f:
-        json.dump(access_list, f)
-
-def load_alerts():
-    if os.path.exists(ALERT_FILE):
-        with open(ALERT_FILE, 'r') as f:
-            return json.load(f)
-    return {}
-
-def save_alerts(data):
-    with open(ALERT_FILE, 'w') as f:
-        json.dump(data, f, indent=2)
-
-
-################################
-
 # ========== INSTANCE MANAGEMENT ==========
 def kill_previous_instances():
     current_pid = os.getpid()
@@ -231,63 +207,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "<b>/help</b> - to see all available commands.",
         parse_mode="HTML"
         )
-
-############################################################
-async def remove_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        if str(update.effective_user.id) != OWNER_ID:
-            await update.message.reply_text("Unauthorized.")
-            return
-
-        if not context.args:
-            await update.message.reply_text("Usage: /remove_user <USER_ID>")
-            return
-
-        user_id = context.args[0]
-        access_list = load_access()
-        if user_id in access_list:
-            access_list.remove(user_id)
-            save_access(access_list)
-            await update.message.reply_text(f"User {user_id} removed from access list.")
-        else:
-            await update.message.reply_text(f"User {user_id} not found in access list.")
-    except Exception as e:
-        await update.message.reply_text(f"Error: {e}")
-        
-async def remove_coin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        if str(update.effective_user.id) != OWNER_ID:
-            await update.message.reply_text("Unauthorized.")
-            return
-
-        if len(context.args) < 2:
-            await update.message.reply_text("Usage: /remove_coin <USER_ID> <COIN>")
-            return
-
-        user_id = context.args[0]
-        coin = context.args[1].upper()
-
-        alerts = load_alerts()
-
-        if user_id not in alerts:
-            await update.message.reply_text(f"No alerts found for user {user_id}.")
-            return
-
-        user_alerts = alerts[user_id]
-        initial_len = len(user_alerts)
-
-        # Remove entries matching the coin
-        alerts[user_id] = [entry for entry in user_alerts if entry.get("symbol", "").upper() != coin]
-
-        if len(alerts[user_id]) < initial_len:
-            save_alerts(alerts)
-            await update.message.reply_text(f"Removed {coin} for user {user_id}.")
-        else:
-            await update.message.reply_text(f"{coin} not found for user {user_id}.")
-    except Exception as e:
-        await update.message.reply_text(f"Error: {e}")
-
-############################################################
 
 # Help command
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -995,9 +914,7 @@ async def main():
             ("list", list_alerts),
             ("remove", remove_alert),
             ("coin", coin_command),
-            ("price", get_price),
-            ("remove_coin", remove_coin),
-            ("remove_user", remove_user)
+            ("price", get_price)
         ]
         
         for cmd, handler in commands:
