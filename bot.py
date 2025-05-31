@@ -48,7 +48,7 @@ class PingHandler(BaseHTTPRequestHandler):
 
 def run_ping_server():
     def server_thread():
-        server = HTTPServer(('0.0.0.0', 10001), PingHandler)
+        server = HTTPServer(('0.0.0.0', 10002), PingHandler)
         server.serve_forever()
     Thread(target=server_thread, daemon=True).start()
 
@@ -141,6 +141,7 @@ async def main():
 
     # Start self-ping and bot
     asyncio.create_task(ping_self())
+    
     await app.run_polling()
 
 if __name__ == "__main__":
