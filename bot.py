@@ -646,23 +646,28 @@ async def coin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     access = load_access()
     
-    # Default reply
     default_coin = "BTC"
     reply_lines = [f"<b>💰 Your default coin:</b> {default_coin}"]
 
     if user_id == access["owner"]:
-        coins = "\n".join([f"• {k.upper()} ({v})" for k, v in SYMBOL_MAP.items()])
-        reply_lines.append(f"\n<b>📊 All Coins:</b>\n{coins}")
+        accessible_coins = list(SYMBOL_MAP.keys())  # owner sees all coins as accessible
+        reply_lines.append("<b>📊 Owner Access:</b> You can manage all coins.")
         reply_lines.append("\nUse /add COIN PRICE [above|below] to set an alert.")
     elif user_id in access["users"]:
-        accessible_coins = access["users"][user_id]["coins"]
-        coins = "\n".join([f"• {c.upper()} ({SYMBOL_MAP.get(c, 'Unknown')})" for c in accessible_coins])
-        reply_lines.append(f"\n<b>📊 Your Coins:</b>\n{coins}")
+        accessible_coins = access["users"][user_id].get("coins", [])
+        coins_list = "\n".join([f"• {c.upper()} ({SYMBOL_MAP.get(c, 'Unknown')})" for c in accessible_coins])
+        reply_lines.append(f"<b>📊 Your Coins:</b>\n{coins_list}")
         reply_lines.append("\nUse /request_coin COIN to request more.")
     else:
+        accessible_coins = []
         reply_lines.append("\n❌ You don't have access. Use /request first.")
-    
+
+    # Now add all available coins for everyone at the bottom
+    all_coins_list = "\n".join([f"• {k.upper()} ({v})" for k, v in SYMBOL_MAP.items()])
+    reply_lines.append(f"\n<b>🌐 All Available Coins:</b>\n{all_coins_list}")
+
     await update.message.reply_text("\n".join(reply_lines), parse_mode="HTML")
+
 
 # ========== PRICE COMMAND ==========
 async def get_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -818,15 +823,14 @@ async def main():
         
         # Start bot
         print("🤖 Bot is running...")
-        await app.initialize()
-        await app.start()
+        
         
         # Notify owner
         try:
             await app.bot.send_message(chat_id=OWNER_ID, text="🤖 Bot started successfully!")
         except Exception as e:
             print(f"Owner notification failed: {e}")
-        
+        await app.run_polling()
         # Keep running
         while True:
             await asyncio.sleep(3600)

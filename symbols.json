@@ -1,0 +1,13 @@
+{
+  "btc": "bitcoin",
+  "eth": "ethereum",
+  "bnb": "binancecoin",
+  "sol": "solana",
+  "ada": "cardano",
+  "doge": "dogecoin",
+  "xrp": "ripple",
+  "meme": "meme",
+  "moxie": "moxie",
+  "degen": "degen-base",
+  "op": "optimism"
+}
