@@ -837,6 +837,7 @@ async def main():
             await app.bot.send_message(chat_id=OWNER_ID, text="🤖 Bot started successfully!")
         except Exception as e:
             print(f"Owner notification failed: {e}")
+            
         await app.run_polling()
         # Keep running
         while True:
@@ -847,6 +848,7 @@ async def main():
     finally:
         if 'app' in locals():
             await app.stop()
+            await app.shutdown()
         print("🤖 Bot stopped")
 
 if __name__ == "__main__":
