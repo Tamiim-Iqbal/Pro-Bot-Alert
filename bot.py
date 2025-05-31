@@ -171,18 +171,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id == access["owner"]:
         await update.message.reply_text(
             "👋 <b>Welcome to Crypto Alert Bot! </b>\n\n"
-            "Use <b><i>/add COIN PRICE</i></b> or <b><i>/add COIN PRICE below</i></b> - to set a price alert.\n\n"
-            "Examples:\n"
-            "<b><i>/add BTC 100000</i></b> - alert if price goes above 100000\n"
-            "<b><i>/add BTC 100000 below</i></b> - alert if price drops below 100000\n"
-            "\n📌 <b>Owner Commands:</b>\n"
-            "<b><i>/approve USER_ID</i></b> - Approve user\n"
-            "<b><i>/decline USER_ID</i></b> - Decline user\n"
-            "<b><i>/approve_coin USER_ID COIN</i></b> - Approve coin\n"
-            "<b><i>/decline_coin USER_ID COIN</i></b> - Decline coin\n"
-            "<b><i>/list_users</i></b> - List all users\n"
-            "<b><i>/new_coin SYMBOL COINGECKO_ID</i></b> - Add new cryptocurrency\n"
-            "Use <b><i>/help</i></b> - to see all available commands.",
+            "Use <b>/add COIN PRICE</b> or <b>/add COIN PRICE below</b> - to set a price alert.\n\n"
+            "<b>Examples:</b>\n"
+            "<b>/add BTC 100000</b> - alert if price goes above 100000\n"
+            "<b>/add BTC 100000 below</b> - alert if price drops below 100000\n"
+            "\n📌 <b>Owner Commands:</b>\n\n"
+            "<b>/approve USER_ID</b> - Approve user\n"
+            "<b>/decline USER_ID</b> - Decline user\n"
+            "<b>/approve_coin USER_ID COIN</b> - Approve coin\n"
+            "<b>/decline_coin USER_ID COIN</b> - Decline coin\n"
+            "<b>/list_users</b> - List all users\n"
+            "<b>/new_coin SYMBOL COINGECKO_ID</b> - Add new cryptocurrency\n"
+            "<b>/help</b> - to see all available commands.",
             parse_mode="HTML"
         )
         return
@@ -208,38 +208,39 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     has_access = user_id in access["users"]
     
     basic_help = (
-        "📌 <b>Basic Commands:</b>\n"
-        "<b><i>/start</i></b> - Start the bot\n"
-        "<b><i>/help</i></b> - Show this help message\n"
+        "📌 *Basic Commands*:\n"
+        "<b>/start</b> - Start the bot\n"
+        "<b>/help</b> - Show this help message\n"
     )
+    await update.message.reply_text(basic_help, parse_mode="HTML")
     if not has_access and not is_owner:
-        basic_help += "❌ You are not authorized to use this bot.\nUse <b><i>/request </b></i> to ask for access."
-        await update.message.reply_text(basic_help)
+        basic_help += "❌ You are not authorized to use this bot.\nUse <b>/request </b> to ask for access."
+        await update.message.reply_text(basic_help, parse_mode="HTML")
         return
     
     user_help = (
         "\n📌 <b>User Commands:/b>\n"
-        "<b><i>/add COIN PRICE [above|below]</i></b> - Set a price alert\n"
-        "<b><i>/list</i></b> - Show your active alerts\n"
-        "<b><i>/remove NUMBER</i></b> - Remove an alert\n"
-        "<b><i>/coin</i></b> - Show available coins for price alerts or to check their current prices\n"
-        "<b><i>/price COIN [COIN2 ...</i></b>] - Check current price(s).\n"
-        "<b><i>/request_coin COIN</i></b> - Request coin access\n"
+        "<b>/add COIN PRICE [above|below]</b> - Set a price alert\n"
+        "<b>/list</b> - Show your active alerts\n"
+        "<b>/remove NUMBER</b> - Remove an alert\n"
+        "<b>/coin</b> - Show available coins for price alerts or to check their current prices\n"
+        "<b>/price COIN [COIN2 ...</b>] - Check current price(s).\n"
+        "<b>/request_coin COIN</b> - Request coin access\n"
     )
-    
+    await update.message.reply_text(user_help, parse_mode="HTML")
     owner_help = ""
     if is_owner:
         owner_help = (
             "\n📌 <b>Owner Commands:</b>\n"
-            "<b><i>/approve USER_ID</i></b> - Approve user\n"
-            "<b><i>/decline USER_ID</i></b> - Decline user\n"
-            "<b><i>/approve_coin USER_ID COIN</i></b> - Approve coin\n"
-            "<b><i>/decline_coin USER_ID COIN</i></b> - Decline coin\n"
-            "<b><i>/list_users</i></b> - List all users\n"
-            "<b><i>/new_coin SYMBOL COINGECKO_ID</i></b> - Add new cryptocurrency\n"
+            "<b>/approve USER_ID</b> - Approve user\n"
+            "<b>/decline USER_ID</b> - Decline user\n"
+            "<b>/approve_coin USER_ID COIN</b> - Approve coin\n"
+            "<b>/decline_coin USER_ID COIN</b> - Decline coin\n"
+            "<b>/list_users</b> - List all users\n"
+            "<b>/new_coin SYMBOL COINGECKO_ID</b> - Add new cryptocurrency\n"
         )
     
-    await update.message.reply_text(basic_help + user_help + owner_help)
+    await update.message.reply_text(basic_help + user_help + owner_help, parse_mode="HTML")
 # new coin command
 async def new_coin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
@@ -337,7 +338,7 @@ async def approve_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if not context.args:
-        await update.message.reply_text("❗ Usage: /approve USER_ID or or /decline USER_ID")
+        await update.message.reply_text("❗ Usage: /approve USER_ID or /decline USER_ID")
         return
     
     target_id = context.args[0]
@@ -364,12 +365,12 @@ async def approve_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chat_id=int(target_id),
         text="🎉 <b> Your access has been approved! </b>\n\n"
              "You can now set alerts for BTC.\n"
-             "Use <b><i>/add COIN PRICE</i></b> or <b><i>/add COIN PRICE below</i></b> - to set a price alert.\n\n"
+             "Use <b>/add COIN PRICE</b> or <b>/add COIN PRICE below</b> - to set a price alert.\n\n"
             "Examples:\n"
-            "<b><i>/add BTC 100000</i></b> - alert if price goes above 100000\n"
-            "<b><i>/add BTC 100000 below</i></b> - alert if price drops below 100000\n\n"
-            "<b><i>Use /request_coin COIN</i></b> - to request more coins.\n"
-            "Use <b><i>/help</i></b> - to see all available commands."
+            "<b>/add BTC 100000</b> - alert if price goes above 100000\n"
+            "<b>/add BTC 100000 below</b> - alert if price drops below 100000\n\n"
+            "<b>Use /request_coin COIN</b> - to request more coins.\n"
+            "Use <b>/help</b> - to see all available commands."
     )
 
 async def decline_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -411,7 +412,7 @@ async def request_coin_access(update: Update, context: ContextTypes.DEFAULT_TYPE
     access = load_access()
     
     if user_id not in access["users"]:
-        await update.message.reply_text("❌ You are not authorized to use this bot.\nUse <b><i>/request </b></i> to ask for access.")
+        await update.message.reply_text("❌ You are not authorized to use this bot.\nUse <b>/request </b> to ask for access.",parse_mode="HTML")
         return
     
     if not context.args:
@@ -447,7 +448,8 @@ async def request_coin_access(update: Update, context: ContextTypes.DEFAULT_TYPE
              f"User: {user.username or user.first_name} (@{user.username})\n"
              f"ID: {user_id}\n"
              f"Coin: {coin.upper()}\n"
-             f"Use /approve_coin {user_id} {coin} or /decline_coin {user_id} {coin}"
+             f"Use /approve_coin {user_id} {coin} or /decline_coin {user_id} {coin}",
+             parse_mode="HTML"
     )
     
     await update.message.reply_text(f"✅ Request for {coin.upper()} sent to admin.")
@@ -569,11 +571,11 @@ async def add_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
     access = load_access()
     
     if user_id != access["owner"] and user_id not in access["users"]:
-        await update.message.reply_text("❌ You are not authorized to use this bot.\nUse <b><i>/request </b></i> to ask for access.")
+        await update.message.reply_text("❌ You are not authorized to use this bot.\nUse <b>/request </b> to ask for access.",parse_mode="HTML")
         return
     
     if len(context.args) < 2:
-        await update.message.reply_text("❗ Usage: <b><i>/add COIN PRICE [above|below] </b></i>\n")
+        await update.message.reply_text("❗ Usage: <b>/add COIN PRICE [above|below] </b>\n")
         return
     
     symbol = context.args[0].lower()
@@ -583,7 +585,7 @@ async def add_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if user_id != access["owner"] and symbol not in access["users"][user_id]["coins"]:
-        await update.message.reply_text(f"❌ No access to {symbol.upper()}. Use <b><i>/request_coin {symbol} </b></i> to request access.")
+        await update.message.reply_text(f"❌ No access to {symbol.upper()}. Use <b>/request_coin {symbol} </b> to request access.")
         return
     
     try:
@@ -614,7 +616,7 @@ async def list_alerts(update: Update, context: ContextTypes.DEFAULT_TYPE):
     access = load_access()
     
     if user_id != access["owner"] and user_id not in access["users"]:
-        await update.message.reply_text("❌ You are not authorized to use this bot.\nUse <b><i>/request </b></i> to ask for access.")
+        await update.message.reply_text("❌ You are not authorized to use this bot.\nUse <b>/request </b> to ask for access.",parse_mode="HTML")
         return
     
     alerts = load_alerts()
@@ -634,7 +636,7 @@ async def remove_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
     access = load_access()
     
     if user_id != access["owner"] and user_id not in access["users"]:
-        await update.message.reply_text("❌ You are not authorized to use this bot.\nUse <b><i>/request </b></i> to ask for access")
+        await update.message.reply_text("❌ You are not authorized to use this bot.\nUse <b>/request </b> to ask for access.",parse_mode="HTML")
         return
     
     if len(context.args) != 1 or not context.args[0].isdigit():
@@ -675,10 +677,10 @@ async def coin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         accessible_coins = access["users"][user_id].get("coins", [])
         coins_list = "\n".join([f"• {c.upper()} ({SYMBOL_MAP.get(c, 'Unknown')})" for c in accessible_coins])
         reply_lines.append(f"<b>📊 Your Coins:</b>\n{coins_list}")
-        reply_lines.append("\nUse <b><i>/request_coin COIN </b></i> to request more coins.")
+        reply_lines.append("\nUse <b>/request_coin COIN </b> to request more coins.")
     else:
         accessible_coins = []
-        reply_lines.append("\n❌ You are not authorized to use this bot.\nUse <b><i>/request </b></i> to ask for access.")
+        reply_lines.append("\n❌ You are not authorized to use this bot.\nUse <b>/request </b> to ask for access.", parse_mode="HTML")
 
     # Now add all available coins for everyone at the bottom
     all_coins_list = "\n".join([f"• {k.upper()} ({v})" for k, v in SYMBOL_MAP.items()])
@@ -693,11 +695,11 @@ async def get_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     access = load_access()
     
     if user_id != access["owner"] and user_id not in access["users"]:
-        await update.message.reply_text("❌ You are not authorized to use this bot.\nUse <b><i>/request </b></i> to ask for access.")
+        await update.message.reply_text("❌ You are not authorized to use this bot.\nUse <b>/request </b> to ask for access.",parse_mode="HTML")    
         return
     
     if not context.args:
-        await update.message.reply_text("❗ Usage: <b><i>/price COIN [COIN2 ...] </b></i>")
+        await update.message.reply_text("❗ Usage: <b>/price COIN [COIN2 ...] </b>")
         return
     
     symbols = [s.lower() for s in context.args]
@@ -708,7 +710,7 @@ async def get_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if unauthorized:
             await update.message.reply_text(
                 f"❌ No access to: {', '.join([c.upper() for c in unauthorized])}\n"
-                f"Use <b><i>/request_coin COIN </b></i> to request access."
+                f"Use <b>/request_coin COIN </b> to request access."
             )
             return
     
@@ -738,7 +740,7 @@ async def get_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ Failed to fetch prices. Try again later.")
 
 async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("❌ Unknown command. Use <b><i>/help</i></b> - to see all available commands.")
+    await update.message.reply_text("❌ Unknown command. Use <b>/help</b> - to see all available commands.")
 
 # ========== PRICE CHECKING ==========
 async def check_prices(context: ContextTypes.DEFAULT_TYPE):
