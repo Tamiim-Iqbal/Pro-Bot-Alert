@@ -6,7 +6,7 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from dotenv import load_dotenv
 import firebase_admin
-from firebase_admin import credentials, firestore, initialize_app
+from firebase_admin import credentials, firestore
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
 import json
@@ -16,19 +16,25 @@ load_dotenv()
 
 # Telegram and Firebase setup
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-PING_URL = os.getenv("PING_URL")  # e.g., https://your-app-name.onrender.com/
+PING_URL = os.getenv("PING_URL")
+
+if not TELEGRAM_BOT_TOKEN:
+    raise Exception("Missing TELEGRAM_BOT_TOKEN environment variable")
 
 # Firebase setup
 cred_json = os.getenv("FIREBASE_CREDENTIALS")
 if not cred_json:
     raise Exception("Missing FIREBASE_CREDENTIALS environment variable")
 
+# Parse JSON string and initialize Firebase
 cred_dict = json.loads(cred_json)
 cred = credentials.Certificate(cred_dict)
 firebase_admin.initialize_app(cred)
+
+# Initialize Firestore
 db = firestore.client()
 
-ADMINS = ["your_telegram_user_id"]  # Replace with your Telegram ID (as string)
+ADMINS = ["your_telegram_user_id"]  # Replace with your Telegram user ID(s) as string(s)
 
 nest_asyncio.apply()
 
@@ -58,7 +64,8 @@ async def ping_self():
             print("Ping failed:", e)
         await asyncio.sleep(300)
 
-# Command: /start
+# Telegram commands ...
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     user_doc = db.collection(USERS_COLLECTION).document(user_id).get()
@@ -75,7 +82,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         })
         await update.message.reply_text("📩 Request received. Wait for admin approval.")
 
-# Command: /alert <coin>
 async def alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     user_doc = db.collection(USERS_COLLECTION).document(user_id).get()
@@ -95,7 +101,6 @@ async def alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
     })
     await update.message.reply_text(f"✅ Alert set for {coin.upper()}!")
 
-# Command: /approve <user_id>
 async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
     admin_id = str(update.effective_user.id)
     if admin_id not in ADMINS:
@@ -110,7 +115,6 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.collection(USERS_COLLECTION).document(user_id).update({"approved": True})
     await update.message.reply_text(f"✅ User {user_id} approved.")
 
-# Command: /list_requests
 async def list_requests(update: Update, context: ContextTypes.DEFAULT_TYPE):
     admin_id = str(update.effective_user.id)
     if admin_id not in ADMINS:
@@ -125,8 +129,20 @@ async def list_requests(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("✅ No pending requests.")
 
+# Delete existing webhook to avoid conflicts
+def delete_webhook():
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/deleteWebhook"
+    try:
+        res = requests.get(url)
+        print("Webhook delete response:", res.json())
+    except Exception as e:
+        print("Failed to delete webhook:", e)
+
 # Main bot loop
 async def main():
+    # Delete any existing webhook before starting polling
+    delete_webhook()
+
     run_ping_server()
 
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
@@ -136,19 +152,14 @@ async def main():
     app.add_handler(CommandHandler("approve", approve))
     app.add_handler(CommandHandler("list_requests", list_requests))
 
-    # Self-ping task
+    # Start self-ping task
     asyncio.create_task(ping_self())
 
-    # Setup webhook
-    webhook_path = f"/{TELEGRAM_BOT_TOKEN}"
-    webhook_url = f"{PING_URL}{webhook_path}"
-
-    await app.run_webhook(
-        listen="0.0.0.0",
-        port=10000,
-        webhook_path=webhook_path,
-        url=webhook_url
-    )
+    # Start polling
+    await app.run_polling()
 
 if __name__ == "__main__":
+    # If you are running in an environment with an existing event loop (like Jupyter),
+    # you might want to use: asyncio.run(main())
+    # or, in those environments, use nest_asyncio and run main directly:
     asyncio.run(main())
