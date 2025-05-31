@@ -6,7 +6,7 @@ import asyncio
 import psutil
 import signal
 from telegram import Update
-from telegram.ext import CommandHandler, ContextTypes
+from telegram.ext import ContextTypes
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
 from telegram import Update
