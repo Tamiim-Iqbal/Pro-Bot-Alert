@@ -722,7 +722,7 @@ async def add_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if len(context.args) < 2:
-        await update.message.reply_text("❗ Usage: <b>/add COIN PRICE [above|below] </b>\n")
+        await update.message.reply_text("❗ Usage: <b>/add COIN PRICE [above|below] </b>\n", parse_mode="HTML")
         return
     
     symbol = context.args[0].lower()
