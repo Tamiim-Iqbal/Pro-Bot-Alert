@@ -16,19 +16,16 @@ load_dotenv()
 
 # Telegram and Firebase setup
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-PING_URL = os.getenv("PING_URL")
+PING_URL = os.getenv("PING_URL")  # e.g., https://your-app-name.onrender.com/
 
 # Firebase setup
 cred_json = os.getenv("FIREBASE_CREDENTIALS")
 if not cred_json:
     raise Exception("Missing FIREBASE_CREDENTIALS environment variable")
 
-# Parse JSON string and initialize Firebase
 cred_dict = json.loads(cred_json)
 cred = credentials.Certificate(cred_dict)
 firebase_admin.initialize_app(cred)
-
-# Initialize Firestore
 db = firestore.client()
 
 ADMINS = ["your_telegram_user_id"]  # Replace with your Telegram ID (as string)
@@ -48,7 +45,7 @@ class PingHandler(BaseHTTPRequestHandler):
 
 def run_ping_server():
     def server_thread():
-        server = HTTPServer(('0.0.0.0', 10002), PingHandler)
+        server = HTTPServer(('0.0.0.0', 10001), PingHandler)
         server.serve_forever()
     Thread(target=server_thread, daemon=True).start()
 
@@ -139,10 +136,19 @@ async def main():
     app.add_handler(CommandHandler("approve", approve))
     app.add_handler(CommandHandler("list_requests", list_requests))
 
-    # Start self-ping and bot
+    # Self-ping task
     asyncio.create_task(ping_self())
-    
-    await app.run_polling()
+
+    # Setup webhook
+    webhook_path = f"/{TELEGRAM_BOT_TOKEN}"
+    webhook_url = f"{PING_URL}{webhook_path}"
+
+    await app.run_webhook(
+        listen="0.0.0.0",
+        port=10000,
+        webhook_path=webhook_path,
+        url=webhook_url
+    )
 
 if __name__ == "__main__":
     asyncio.run(main())
