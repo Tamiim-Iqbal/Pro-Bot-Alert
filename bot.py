@@ -8,6 +8,10 @@ from dotenv import load_dotenv
 from firebase_admin import credentials, firestore, initialize_app
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
+import json
+
+with open("serviceAccountKey.json") as f:
+    print(json.dumps(json.load(f)))
 
 # Load .env variables
 load_dotenv()
@@ -17,8 +21,13 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 PING_URL = os.getenv("PING_URL")
 
 # Firebase setup
-cred_path = os.getenv("FIREBASE_CREDENTIALS", "serviceAccountKey.json")
-cred = credentials.Certificate(cred_path)
+
+cred_json = os.getenv("FIREBASE_CREDENTIALS")
+if not cred_json:
+    raise Exception("Missing FIREBASE_CREDENTIALS environment variable")
+
+cred_dict = json.loads(cred_json)
+cred = credentials.Certificate(cred_dict)
 initialize_app(cred)
 db = firestore.client()
 
