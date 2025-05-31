@@ -823,6 +823,9 @@ async def get_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         print("Unexpected error:", e)
         await update.message.reply_text("⚠️ Failed to fetch prices. Try again later.")
+    
+async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("❌ Unknown command. Use /help for available commands.")
 
 # ========== PRICE CHECKING ==========
 async def check_prices(context: ContextTypes.DEFAULT_TYPE):
