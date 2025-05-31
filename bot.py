@@ -34,7 +34,7 @@ firebase_admin.initialize_app(cred)
 # Initialize Firestore
 db = firestore.client()
 
-ADMINS = ["your_telegram_user_id"]  # Replace with your Telegram user ID(s) as string(s)
+ADMINS = ["5817239686"]  # Replace with your Telegram user ID(s) as string(s)
 
 nest_asyncio.apply()
 
