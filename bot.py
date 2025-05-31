@@ -699,6 +699,57 @@ async def coin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ========== PRICE COMMAND ==========
+# async def get_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     user_id = str(update.effective_user.id)
+#     access = load_access()
+    
+#     if user_id != access["owner"] and user_id not in access["users"]:
+#         await update.message.reply_text("❌ You are not authorized to use this bot.\nUse <b>/request </b> to ask for access.",parse_mode="HTML")    
+#         return
+    
+#     if not context.args:
+#         await update.message.reply_text("❗ Usage: <b>/price COIN [COIN2 ...] </b>")
+#         return
+    
+#     symbols = [s.lower() for s in context.args]
+    
+#     if user_id != access["owner"]:
+#         accessible_coins = access["users"][user_id]["coins"]
+#         unauthorized = [s for s in symbols if s not in accessible_coins]
+#         if unauthorized:
+#             await update.message.reply_text(
+#                 f"❌ No access to: {', '.join([c.upper() for c in unauthorized])}\n"
+#                 f"Use <b>/request_coin COIN </b> to request access."
+#             )
+#             return
+    
+#     unknown = [s for s in symbols if s not in SYMBOL_MAP]
+#     if unknown:
+#         await update.message.reply_text(f"❗ Unknown coin(s): {', '.join(unknown)}")
+#         return
+    
+#     ids = [SYMBOL_MAP[s] for s in symbols]
+#     try:
+#         res = requests.get(
+#             "https://api.coingecko.com/api/v3/simple/price",
+#             params={"ids": ",".join(ids), "vs_currencies": "usd"},
+#             timeout=10
+#         ).json()
+        
+#         lines = []
+#         for s in symbols:
+#             price = res.get(SYMBOL_MAP[s], {}).get("usd")
+#             if price is not None:
+#                 lines.append(f"💰 {s.upper()}: ${price:.5f}")
+#             else:
+#                 lines.append(f"⚠️ {s.upper()}: Price not found. Try again later.")
+#         await update.message.reply_text("\n".join(lines))
+#     except Exception as e:
+#         print("Error fetching prices:", e)
+#         await update.message.reply_text("⚠️ Failed to fetch prices. Try again later.")
+
+# async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     await update.message.reply_text("❌ Unknown command. Use <b>/help</b> - to see all available commands.")
 
 async def get_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
@@ -825,36 +876,35 @@ async def check_prices(context: ContextTypes.DEFAULT_TYPE):
         print(f"Price check error: {e}")
 
 
-
-###################################
-def load_access():
-    if os.path.exists(ACCESS_FILE):
-        with open(ACCESS_FILE, 'r') as f:
+#####################################################################################################
+def load_alerts():
+    if os.path.exists(ALERT_FILE):
+        with open(ALERT_FILE, 'r') as f:
             return json.load(f)
-    return []
+    return {}
 
-def save_access(access_list):
-    with open(ACCESS_FILE, 'w') as f:
-        json.dump(access_list, f)
-
-async def add_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def save_alerts(data):
+    with open(ALERT_FILE, 'w') as f:
+        json.dump(data, f, indent=2)
+#coin
+async def remove_coin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if str(update.effective_user.id) != OWNER_ID:
         await update.message.reply_text("Unauthorized.")
         return
 
     if not context.args:
-        await update.message.reply_text("Usage: /add_user <USER_ID>")
+        await update.message.reply_text("Usage: /remove_coin <USER_ID>")
         return
 
     user_id = context.args[0]
-    access_list = load_access()
-    if user_id not in access_list:
-        access_list.append(user_id)
-        save_access(access_list)
-        await update.message.reply_text(f"User {user_id} added.")
+    alerts = load_alerts()
+    if user_id in alerts:
+        del alerts[user_id]
+        save_alerts(alerts)
+        await update.message.reply_text(f"Coins removed for user {user_id}.")
     else:
-        await update.message.reply_text(f"User {user_id} already has access.")
-
+        await update.message.reply_text(f"No coins found for user {user_id}.")
+# user
 async def remove_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if str(update.effective_user.id) != OWNER_ID:
         await update.message.reply_text("Unauthorized.")
@@ -869,11 +919,11 @@ async def remove_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id in access_list:
         access_list.remove(user_id)
         save_access(access_list)
-        await update.message.reply_text(f"User {user_id} removed.")
+        await update.message.reply_text(f"User {user_id} access removed.")
     else:
-        await update.message.reply_text(f"User {user_id} not found.")
+        await update.message.reply_text(f"User {user_id} not found in access list.")
 
-##################################
+#####################################################################################################
 # ========== SELF-PINGING ==========
 async def ping_self():
     while True:
@@ -914,7 +964,7 @@ async def main():
             ("remove", remove_alert),
             ("coin", coin_command),
             ("price", get_price),
-            ("add_user", add_user),
+            ("remove_coin", remove_coin),
             ("remove_user", remove_user)
         ]
         
