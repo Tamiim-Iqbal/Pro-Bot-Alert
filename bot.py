@@ -1,135 +1,138 @@
-import logging
 import os
-import json
 import requests
-import firebase_admin
-from firebase_admin import credentials, db
-from dotenv import load_dotenv
+import nest_asyncio
+import asyncio
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from dotenv import load_dotenv
+from firebase_admin import credentials, firestore, initialize_app
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from threading import Thread
 
-# Load environment variables
+# Load .env variables
 load_dotenv()
-TOKEN = os.getenv("BOT_TOKEN")
 
-# Firebase initialization
-cred = credentials.Certificate(json.loads(os.environ['GOOGLE_CREDENTIALS']))
-firebase_admin.initialize_app(cred, {
-    'databaseURL': os.getenv("FIREBASE_DB_URL")
-})
+# Telegram and Firebase setup
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+PING_URL = os.getenv("PING_URL")
 
-# Telegram logging
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
-)
+# Firebase setup
+cred_path = os.getenv("FIREBASE_CREDENTIALS", "serviceAccountKey.json")
+cred = credentials.Certificate(cred_path)
+initialize_app(cred)
+db = firestore.client()
 
-# ----------------------- Firebase Storage -----------------------
+ADMINS = ["your_telegram_user_id"]  # Replace with your Telegram ID (as string)
 
-def load_alerts():
-    ref = db.reference("/alerts")
-    data = ref.get()
-    return data if data else {}
+nest_asyncio.apply()
 
-def save_alerts(data):
-    ref = db.reference("/alerts")
-    ref.set(data)
+# Firestore collections
+ALERTS_COLLECTION = "alerts"
+USERS_COLLECTION = "users"
 
-# ----------------------- Crypto Price Fetch -----------------------
+# Ping server
+class PingHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Pong")
 
-def get_price(coin):
-    url = f"https://api.coingecko.com/api/v3/simple/price?ids={coin}&vs_currencies=usd"
-    try:
-        res = requests.get(url)
-        data = res.json()
-        return data[coin]["usd"]
-    except:
-        return None
+def run_ping_server():
+    def server_thread():
+        server = HTTPServer(('0.0.0.0', 10001), PingHandler)
+        server.serve_forever()
+    Thread(target=server_thread, daemon=True).start()
 
-# ----------------------- Command Handlers -----------------------
+# Self-ping every 5 minutes
+async def ping_self():
+    while True:
+        try:
+            requests.get(PING_URL)
+        except Exception as e:
+            print("Ping failed:", e)
+        await asyncio.sleep(300)
 
+# Command: /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("👋 Welcome! Use /set <coin> <price> to set an alert.\nExample: /set bitcoin 50000")
+    user_id = str(update.effective_user.id)
+    user_doc = db.collection(USERS_COLLECTION).document(user_id).get()
 
-async def set_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        chat_id = str(update.effective_chat.id)
-        coin = context.args[0].lower()
-        target_price = float(context.args[1])
-
-        alerts = load_alerts()
-        if coin not in alerts:
-            alerts[coin] = []
-
-        alerts[coin].append({"chat_id": chat_id, "target_price": target_price})
-        save_alerts(alerts)
-
-        await update.message.reply_text(f"🔔 Alert set for {coin.upper()} at ${target_price}")
-    except (IndexError, ValueError):
-        await update.message.reply_text("❌ Usage: /set <coin> <price>")
-
-async def list_alerts(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = str(update.effective_chat.id)
-    alerts = load_alerts()
-    user_alerts = []
-
-    for coin, entries in alerts.items():
-        for entry in entries:
-            if entry["chat_id"] == chat_id:
-                user_alerts.append(f"{coin.upper()} at ${entry['target_price']}")
-
-    if user_alerts:
-        await update.message.reply_text("🔔 Your Alerts:\n" + "\n".join(user_alerts))
+    if user_doc.exists:
+        if user_doc.to_dict().get("approved"):
+            await update.message.reply_text("✅ You’re approved! Use /alert <coin> to set alerts.")
+        else:
+            await update.message.reply_text("⏳ You’re waiting for approval. Please wait.")
     else:
-        await update.message.reply_text("📭 No active alerts.")
+        db.collection(USERS_COLLECTION).document(user_id).set({
+            "approved": False,
+            "name": update.effective_user.full_name,
+        })
+        await update.message.reply_text("📩 Request received. Wait for admin approval.")
 
-# ----------------------- Alert Checker -----------------------
+# Command: /alert <coin>
+async def alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = str(update.effective_user.id)
+    user_doc = db.collection(USERS_COLLECTION).document(user_id).get()
 
-async def check_alerts(app):
-    alerts = load_alerts()
-    new_alerts = {}
+    if not user_doc.exists or not user_doc.to_dict().get("approved"):
+        await update.message.reply_text("❌ You are not approved yet.")
+        return
 
-    for coin, entries in alerts.items():
-        price = get_price(coin)
-        if price is None:
-            continue
+    if len(context.args) != 1:
+        await update.message.reply_text("❌ Usage: /alert <coin>")
+        return
 
-        for entry in entries:
-            chat_id = entry["chat_id"]
-            target = entry["target_price"]
+    coin = context.args[0].lower()
+    db.collection(ALERTS_COLLECTION).document(user_id).set({
+        "coin": coin,
+        "timestamp": firestore.SERVER_TIMESTAMP
+    })
+    await update.message.reply_text(f"✅ Alert set for {coin.upper()}!")
 
-            if (price >= target):
-                try:
-                    await app.bot.send_message(chat_id=chat_id, text=f"🚀 {coin.upper()} reached ${price} (target: ${target})!")
-                except Exception as e:
-                    print(f"Error sending message to {chat_id}: {e}")
-            else:
-                # Keep this alert
-                if coin not in new_alerts:
-                    new_alerts[coin] = []
-                new_alerts[coin].append(entry)
+# Command: /approve <user_id>
+async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    admin_id = str(update.effective_user.id)
+    if admin_id not in ADMINS:
+        await update.message.reply_text("❌ You’re not an admin.")
+        return
 
-    save_alerts(new_alerts)
+    if len(context.args) != 1:
+        await update.message.reply_text("❌ Usage: /approve <user_id>")
+        return
 
-# ----------------------- Bot Runner -----------------------
+    user_id = context.args[0]
+    db.collection(USERS_COLLECTION).document(user_id).update({"approved": True})
+    await update.message.reply_text(f"✅ User {user_id} approved.")
 
+# Command: /list_requests
+async def list_requests(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    admin_id = str(update.effective_user.id)
+    if admin_id not in ADMINS:
+        await update.message.reply_text("❌ You’re not an admin.")
+        return
+
+    docs = db.collection(USERS_COLLECTION).where("approved", "==", False).stream()
+    pending = [f"{doc.id} - {doc.to_dict().get('name')}" for doc in docs]
+
+    if pending:
+        await update.message.reply_text("Pending Requests:\n" + "\n".join(pending))
+    else:
+        await update.message.reply_text("✅ No pending requests.")
+
+# Main bot loop
 async def main():
-    app = ApplicationBuilder().token(TOKEN).build()
+    run_ping_server()
+
+    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("set", set_alert))
-    app.add_handler(CommandHandler("alerts", list_alerts))
+    app.add_handler(CommandHandler("alert", alert))
+    app.add_handler(CommandHandler("approve", approve))
+    app.add_handler(CommandHandler("list_requests", list_requests))
 
-    # Run alert checker every 60 seconds
-    async def scheduler():
-        while True:
-            await check_alerts(app)
-            await asyncio.sleep(60)
-
-    import asyncio
-    asyncio.create_task(scheduler())
-    print("✅ Bot is running...")
+    # Start self-ping and bot
+    asyncio.create_task(ping_self())
     await app.run_polling()
 
 if __name__ == "__main__":
-    import asyncio
     asyncio.run(main())
