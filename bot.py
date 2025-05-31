@@ -1,6 +1,7 @@
 import json
 import os
 import requests
+from requests.exceptions import Timeout, RequestException
 import asyncio
 import psutil
 import signal
@@ -197,7 +198,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     coins = ", ".join([c.upper() for c in access["users"][user_id]["coins"]])
-    await update.message.reply_text(f"✅ Your coins: {coins}\nUse /add to set alerts")
+    await update.message.reply_text(
+        "👋 Welcome to Crypto Alert Bot!\n\n"f"✅ Your coins: {coins}\n"
+        "Use <b>/add COIN PRICE</b> or <b>/add COIN PRICE below</b> - to set a price alert.\n\n"
+        "<b>Examples:</b>\n\n"
+        "<b>/add BTC 100000</b> - alert if price goes above 100000\n"
+        "<b>/add BTC 100000 below</b> - alert if price drops below 100000\n"
+        "<b>/help</b> - to see all available commands.",
+        parse_mode="HTML"
+        )
 
 # Help command
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -208,18 +217,17 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     has_access = user_id in access["users"]
     
     basic_help = (
-        "📌 *Basic Commands*:\n"
+        "📌 <b>Basic Commands</b>:\n\n"
         "<b>/start</b> - Start the bot\n"
         "<b>/help</b> - Show this help message\n"
     )
-    await update.message.reply_text(basic_help, parse_mode="HTML")
+
     if not has_access and not is_owner:
         basic_help += "❌ You are not authorized to use this bot.\nUse <b>/request </b> to ask for access."
-        await update.message.reply_text(basic_help, parse_mode="HTML")
         return
     
     user_help = (
-        "\n📌 <b>User Commands:/b>\n"
+        "\n📌 <b>User Commands:</b>\n\n"
         "<b>/add COIN PRICE [above|below]</b> - Set a price alert\n"
         "<b>/list</b> - Show your active alerts\n"
         "<b>/remove NUMBER</b> - Remove an alert\n"
@@ -227,7 +235,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "<b>/price COIN [COIN2 ...</b>] - Check current price(s).\n"
         "<b>/request_coin COIN</b> - Request coin access\n"
     )
-    await update.message.reply_text(user_help, parse_mode="HTML")
+    
     owner_help = ""
     if is_owner:
         owner_help = (
@@ -240,7 +248,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "<b>/new_coin SYMBOL COINGECKO_ID</b> - Add new cryptocurrency\n"
         )
     
-    await update.message.reply_text(basic_help + user_help + owner_help, parse_mode="HTML")
+    full_help = basic_help + user_help + owner_help
+    await update.message.reply_text(full_help, parse_mode="HTML")
 # new coin command
 async def new_coin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
@@ -285,7 +294,7 @@ async def new_coin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         SYMBOL_MAP = symbol_map
         
         await update.message.reply_text(
-            f"✅ <b>Added new coin:</b>\n"
+            f"✅ <b>Added new coin:</b>\n\n"
             f"Symbol: {symbol.upper()}\n"
             f"CoinGecko ID: {coin_id}\n\n"
             f"Users can now set alerts for {symbol.upper()}.",
@@ -444,7 +453,7 @@ async def request_coin_access(update: Update, context: ContextTypes.DEFAULT_TYPE
     
     await context.bot.send_message(
         chat_id=access["owner"],
-        text=f"🆕 <b>Coin Access Request: </b>\n"
+        text=f"🆕 <b>Coin Access Request: </b>\n\n"
              f"User: {user.username or user.first_name} (@{user.username})\n"
              f"ID: {user_id}\n"
              f"Coin: {coin.upper()}\n"
@@ -544,7 +553,7 @@ async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not access["users"]:
         users_msg = "<b> No approved users. </b>\n"
     else:
-        users_msg = "<b> Approved Users: </b>\n"
+        users_msg = "<b> Approved Users: </b>\n\n"
         for uid, data in access["users"].items():
             users_msg += f"- {data.get('username', 'Unknown')} (ID: {uid})\n"
             users_msg += f"  Coins: {', '.join([c.upper() for c in data['coins']])}\n"
@@ -552,7 +561,7 @@ async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not access["requests"]:
         requests_msg = "\n<b>No pending access requests.</b>"
     else:
-        requests_msg = "\n<b> Pending Access Requests:</b>\n"
+        requests_msg = "\n<b> Pending Access Requests:</b>\n\n"
         for req in access["requests"]:
             requests_msg += f"- {req['username']} (ID: {req['user_id']})\n"
     
@@ -563,7 +572,7 @@ async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for req in access["coin_requests"]:
             coin_requests_msg += f"- {req['username']} (ID: {req['user_id']}) for {req['coin'].upper()}\n"
     
-    await update.message.reply_text(users_msg + requests_msg + coin_requests_msg)
+    await update.message.reply_text(users_msg + requests_msg + coin_requests_msg, parse_mode="HTML")
 
 # ========== ALERT MANAGEMENT ==========
 async def add_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -609,7 +618,7 @@ async def add_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
     alerts[user_id] = user_alerts
     save_alerts(alerts)
      
-    await update.message.reply_text(f"✅ <b> Alert set for {symbol.upper()} ${price} ({direction})</b>\nYou will be notified when the price condition is met.", parse_mode="HTML")
+    await update.message.reply_text(f"✅ <b> Alert set for {symbol.upper()} ${price} ({direction})</b>\n\nYou will be notified when the price condition is met.", parse_mode="HTML")
 
 async def list_alerts(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
@@ -690,43 +699,113 @@ async def coin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ========== PRICE COMMAND ==========
+# async def get_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     user_id = str(update.effective_user.id)
+#     access = load_access()
+    
+#     if user_id != access["owner"] and user_id not in access["users"]:
+#         await update.message.reply_text("❌ You are not authorized to use this bot.\nUse <b>/request </b> to ask for access.",parse_mode="HTML")    
+#         return
+    
+#     if not context.args:
+#         await update.message.reply_text("❗ Usage: <b>/price COIN [COIN2 ...] </b>")
+#         return
+    
+#     symbols = [s.lower() for s in context.args]
+    
+#     if user_id != access["owner"]:
+#         accessible_coins = access["users"][user_id]["coins"]
+#         unauthorized = [s for s in symbols if s not in accessible_coins]
+#         if unauthorized:
+#             await update.message.reply_text(
+#                 f"❌ No access to: {', '.join([c.upper() for c in unauthorized])}\n"
+#                 f"Use <b>/request_coin COIN </b> to request access."
+#             )
+#             return
+    
+#     unknown = [s for s in symbols if s not in SYMBOL_MAP]
+#     if unknown:
+#         await update.message.reply_text(f"❗ Unknown coin(s): {', '.join(unknown)}")
+#         return
+    
+#     ids = [SYMBOL_MAP[s] for s in symbols]
+#     try:
+#         res = requests.get(
+#             "https://api.coingecko.com/api/v3/simple/price",
+#             params={"ids": ",".join(ids), "vs_currencies": "usd"},
+#             timeout=10
+#         ).json()
+        
+#         lines = []
+#         for s in symbols:
+#             price = res.get(SYMBOL_MAP[s], {}).get("usd")
+#             if price is not None:
+#                 lines.append(f"💰 {s.upper()}: ${price:.5f}")
+#             else:
+#                 lines.append(f"⚠️ {s.upper()}: Price not found. Try again later.")
+#         await update.message.reply_text("\n".join(lines))
+#     except Exception as e:
+#         print("Error fetching prices:", e)
+#         await update.message.reply_text("⚠️ Failed to fetch prices. Try again later.")
+
+# async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     await update.message.reply_text("❌ Unknown command. Use <b>/help</b> - to see all available commands.")
+
 async def get_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     access = load_access()
     
     if user_id != access["owner"] and user_id not in access["users"]:
-        await update.message.reply_text("❌ You are not authorized to use this bot.\nUse <b>/request </b> to ask for access.",parse_mode="HTML")    
+        await update.message.reply_text(
+            "❌ You are not authorized to use this bot.\nUse <b>/request</b> to ask for access.",
+            parse_mode="HTML"
+        )
         return
-    
+
     if not context.args:
-        await update.message.reply_text("❗ Usage: <b>/price COIN [COIN2 ...] </b>")
+        await update.message.reply_text(
+            "❗ Usage: <b>/price COIN [COIN2 ...]</b>",
+            parse_mode="HTML"
+        )
         return
-    
+
     symbols = [s.lower() for s in context.args]
-    
+
     if user_id != access["owner"]:
-        accessible_coins = access["users"][user_id]["coins"]
+        accessible_coins = access["users"][user_id].get("coins", [])
         unauthorized = [s for s in symbols if s not in accessible_coins]
         if unauthorized:
             await update.message.reply_text(
                 f"❌ No access to: {', '.join([c.upper() for c in unauthorized])}\n"
-                f"Use <b>/request_coin COIN </b> to request access."
+                f"Use <b>/request_coin COIN</b> to request access.",
+                parse_mode="HTML"
             )
             return
-    
+
     unknown = [s for s in symbols if s not in SYMBOL_MAP]
     if unknown:
-        await update.message.reply_text(f"❗ Unknown coin(s): {', '.join(unknown)}")
+        await update.message.reply_text(
+            f"❗ Unknown coin(s): {', '.join(unknown)}",
+            parse_mode="HTML"
+        )
         return
-    
+
     ids = [SYMBOL_MAP[s] for s in symbols]
+
     try:
-        res = requests.get(
-            "https://api.coingecko.com/api/v3/simple/price",
-            params={"ids": ",".join(ids), "vs_currencies": "usd"},
-            timeout=10
-        ).json()
-        
+        # Attempt request with retry
+        for attempt in range(2):  # Try up to 2 times
+            try:
+                res = requests.get(
+                    "https://api.coingecko.com/api/v3/simple/price",
+                    params={"ids": ",".join(ids), "vs_currencies": "usd"},
+                    timeout=10
+                ).json()
+                break  # If success, break loop
+            except Timeout:
+                if attempt == 1:
+                    raise  # Raise on final try
+        # Parse result
         lines = []
         for s in symbols:
             price = res.get(SYMBOL_MAP[s], {}).get("usd")
@@ -735,12 +814,15 @@ async def get_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 lines.append(f"⚠️ {s.upper()}: Price not found. Try again later.")
         await update.message.reply_text("\n".join(lines))
-    except Exception as e:
-        print("Error fetching prices:", e)
-        await update.message.reply_text("⚠️ Failed to fetch prices. Try again later.")
 
-async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("❌ Unknown command. Use <b>/help</b> - to see all available commands.")
+    except Timeout:
+        await update.message.reply_text("⏱️ Request timed out. Try again in a few seconds.")
+    except RequestException as e:
+        print("Request failed:", e)
+        await update.message.reply_text("⚠️ Failed to fetch prices due to a network error.")
+    except Exception as e:
+        print("Unexpected error:", e)
+        await update.message.reply_text("⚠️ Failed to fetch prices. Try again later.")
 
 # ========== PRICE CHECKING ==========
 async def check_prices(context: ContextTypes.DEFAULT_TYPE):
