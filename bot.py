@@ -19,7 +19,6 @@ from telegram.ext import (
 )
 from dotenv import load_dotenv
 
-# ========== INITIALIZATION ==========
 # Load environment variables
 load_dotenv()
 
@@ -32,8 +31,6 @@ SYMBOL_MAP_FILE = 'symbols.json'
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 PING_URL = os.getenv("PING_URL", "http://localhost:10001")
 OWNER_ID = os.getenv("OWNER_ID", "5817239686")
-
-
 
 # Crypto symbol mapping
 def load_symbol_map():
@@ -172,12 +169,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if user_id == access["owner"]:
         await update.message.reply_text(
-            "👋 <b>Welcome to Crypto Alert Bot! </b>\n\n"
+            "👋 <b>Welcome to Crypto Signal Bot! </b>\n\n"
             "Use <b>/add COIN PRICE</b> or <b>/add COIN PRICE below</b> - to set a price alert.\n\n"
-            "<b>Examples:</b>\n\n"
+            "<b>Examples:</b>\n"
             "<b>/add BTC 100000</b> - alert if price goes above 100000\n"
             "<b>/add BTC 100000 below</b> - alert if price drops below 100000\n"
-            "\n📌 <b>Owner Commands:</b>\n\n"
+            "\n📌 <b>Owner Commands:</b>\n"
             "<b>/approve USER_ID</b> - Approve user\n"
             "<b>/decline USER_ID</b> - Decline user\n"
             "<b>/approve_coin USER_ID COIN</b> - Approve coin\n"
@@ -191,8 +188,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if user_id not in access["users"]:
         await update.message.reply_text(
-            "👋 Welcome to Crypto Alert Bot!\n\n"
-            "You are not authorized to use this bot.\n"
+            "👋 <b>Welcome to Crypto Signal Bot!</b>\n\n"
+            "❌ You are not authorized to use this bot.\n"
             "Use /request to ask for access.",
             parse_mode="HTML"
         )
@@ -219,7 +216,7 @@ async def remove_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Check if USER_ID is provided
     if not context.args:
-        await update.message.reply_text("Usage: /remove_user <USER_ID>")
+        await update.message.reply_text("Usage: <b>/remove_user <USER_ID> </b>", parse_mode="HTML")
         return
 
     user_id = context.args[0]
@@ -227,28 +224,29 @@ async def remove_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id in access["users"]:
         del access["users"][user_id]
         save_access(access)
-        await update.message.reply_text(f"✅ User {user_id} removed successfully.")
+        await update.message.reply_text(f"✅ User <b>{user_id}</b> removed successfully.", parse_mode="HTML")
     else:
-        await update.message.reply_text(f"⚠️ User {user_id} not found.")
+        await update.message.reply_text(f"⚠️ User <b>{user_id}</b> not found.",parse_mode="HTML")
 
 
 # remove coin       
 async def remove_coin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     access = load_access()
 
+    # Only owner can execute this
     if str(update.effective_user.id) != access.get("owner"):
         await update.message.reply_text("❌ Only owner can remove coins.")
         return
 
     if len(context.args) < 2:
-        await update.message.reply_text("Usage: /remove_coin <USER_ID> <COIN>")
+        await update.message.reply_text("Usage: <b>/remove_coin <USER_ID> <COIN></b>", parse_mode="HTML")
         return
 
     user_id = context.args[0]
     coin = context.args[1].lower()
 
     if user_id not in access["users"]:
-        await update.message.reply_text(f"User {user_id} not found.")
+        await update.message.reply_text(f"User <b>{user_id}</b> not found.",parse_mode="HTML")
         return
 
     user_data = access["users"][user_id]
@@ -258,33 +256,30 @@ async def remove_coin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         coins.remove(coin)
         user_data["coins"] = coins
         save_access(access)
-        await update.message.reply_text(f"{coin.upper()} removed from user {user_id}'s coin access.")
+        await update.message.reply_text(f"<b>{coin.upper()}</b> removed from user <b>{user_id}</b>'s coin access.")
     else:
-        await update.message.reply_text(f"{coin.upper()} not found in user {user_id}'s allowed coins.")
+        await update.message.reply_text(f"<b>{coin.upper()}</b> not found in user <b>{user_id}</b>'s allowed coins.")
 
-
-
-#############################################################################################
 # Help command
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     access = load_access()
-    
+
     is_owner = user_id == access["owner"]
     has_access = user_id in access["users"]
-    
-    basic_help = (
-        "📌 <b>Basic Commands</b>:\n\n"
-        "<b>/start</b> - Start the bot\n"
-        "<b>/help</b> - Show this help message\n"
-    )
 
     if not has_access and not is_owner:
         basic_help += "❌ You are not authorized to use this bot.\nUse <b>/request </b> to ask for access."
         return
     
+    basic_help = (
+        "📌 <b>Basic Commands</b>:\n"
+        "<b>/start</b> - Start the bot\n"
+        "<b>/help</b> - Show this help message\n"
+    )
+
     user_help = (
-        "\n📌 <b>User Commands:</b>\n\n"
+        "\n📌 <b>User Commands:</b>\n"
         "<b>/add COIN PRICE [above|below]</b> - Set a price alert\n"
         "<b>/list</b> - Show your active alerts\n"
         "<b>/remove NUMBER</b> - Remove an alert\n"
@@ -296,7 +291,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     owner_help = ""
     if is_owner:
         owner_help = (
-            "\n📌 <b>Owner Commands:</b>\n\n"
+            "\n📌 <b>Owner Commands:</b>\n"
             "<b>/approve USER_ID</b> - Approve user\n"
             "<b>/decline USER_ID</b> - Decline user\n"
             "<b>/approve_coin USER_ID COIN</b> - Approve coin\n"
@@ -307,6 +302,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     full_help = basic_help + user_help + owner_help
     await update.message.reply_text(full_help, parse_mode="HTML")
+
 # new coin command
 async def new_coin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
@@ -317,36 +313,31 @@ async def new_coin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if len(context.args) != 2:
-        await update.message.reply_text("❗ Usage: /new_coin SYMBOL COINGECKO_ID\nExample: /new_coin btc bitcoin")
+        await update.message.reply_text("❗ Usage: <b>/new_coin SYMBOL COINGECKO_ID\nExample: /new_coin btc bitcoin</b>", parse_mode="HTML")
         return
     
-    symbol = context.args[0].lower()
-    coin_id = context.args[1].lower()
+    symbol = context.args[0].strip().lower()
+    coin_id = context.args[1].strip().lower()
     
-    # Load current symbols
     symbol_map = load_symbol_map()
     
     if symbol in symbol_map:
         await update.message.reply_text(f"⚠️ {symbol.upper()} already exists in the symbol map.")
         return
     
-    # Test the coin ID with CoinGecko
+    # Validate CoinGecko ID using /coins/list
     try:
-        test_price = requests.get(
-            "https://api.coingecko.com/api/v3/simple/price",
-            params={"ids": coin_id, "vs_currencies": "usd"},
-            timeout=10
-        ).json()
+        coin_list = requests.get("https://api.coingecko.com/api/v3/coins/list", timeout=10).json()
+        valid_ids = {coin["id"] for coin in coin_list}
         
-        if not test_price.get(coin_id):
+        if coin_id not in valid_ids:
             await update.message.reply_text(f"❌ CoinGecko ID '{coin_id}' not found. Please check the ID.")
             return
-            
-        # Add the new coin
+        
+        # Save new coin
         symbol_map[symbol] = coin_id
         save_symbol_map(symbol_map)
         
-        # Update the in-memory map
         global SYMBOL_MAP
         SYMBOL_MAP = symbol_map
         
@@ -358,41 +349,132 @@ async def new_coin(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="HTML"
         )
     except Exception as e:
-        print(f"Error testing new coin: {e}")
+        print(f"Error checking CoinGecko ID: {e}")
         await update.message.reply_text("⚠️ Failed to verify coin with CoinGecko. Please try again.")
 
-# ========== ACCESS MANAGEMENT ==========
+# async def new_coin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     user_id = str(update.effective_user.id)
+#     access = load_access()
+    
+#     if user_id != access["owner"]:
+#         await update.message.reply_text("❌ Only owner can add new coins.")
+#         return
+    
+#     if len(context.args) != 2:
+#         await update.message.reply_text("❗ Usage: /new_coin SYMBOL COINGECKO_ID\nExample: /new_coin btc bitcoin")
+#         return
+    
+#     symbol = context.args[0].lower()
+#     coin_id = context.args[1].lower()
+    
+#     # Load current symbols
+#     symbol_map = load_symbol_map()
+    
+#     if symbol in symbol_map:
+#         await update.message.reply_text(f"⚠️ {symbol.upper()} already exists in the symbol map.")
+#         return
+    
+#     # Test the coin ID with CoinGecko
+#     try:
+#         test_price = requests.get(
+#             "https://api.coingecko.com/api/v3/simple/price",
+#             params={"ids": coin_id, "vs_currencies": "usd"},
+#             timeout=10
+#         ).json()
+        
+#         if not test_price.get(coin_id):
+#             await update.message.reply_text(f"❌ CoinGecko ID '{coin_id}' not found. Please check the ID.")
+#             return
+            
+#         # Add the new coin
+#         symbol_map[symbol] = coin_id
+#         save_symbol_map(symbol_map)
+        
+#         # Update the in-memory map
+#         global SYMBOL_MAP
+#         SYMBOL_MAP = symbol_map
+        
+#         await update.message.reply_text(
+#             f"✅ <b>Added new coin:</b>\n\n"
+#             f"Symbol: {symbol.upper()}\n"
+#             f"CoinGecko ID: {coin_id}\n\n"
+#             f"Users can now set alerts for {symbol.upper()}.",
+#             parse_mode="HTML"
+#         )
+#     except Exception as e:
+#         print(f"Error testing new coin: {e}")
+#         await update.message.reply_text("⚠️ Failed to verify coin with CoinGecko. Please try again.")
+
+
+# ========== request access ==========
 async def request_access(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     access = load_access()
-    
+    user = update.effective_user
+    username = user.username or user.first_name
+
+    # Already approved
     if user_id in access["users"]:
         await update.message.reply_text("✅ You already have access!")
         return
-    
-    for req in access["requests"]:
-        if req["user_id"] == user_id:
-            await update.message.reply_text("⏳ Your request is already pending.")
-            return
-    
-    user = update.effective_user
-    access["requests"].append({
-        "user_id": user_id,
-        "username": user.username or user.first_name,
-        "timestamp": str(update.message.date)
-    })
-    save_access(access)
-    
+
+    # Check if already requested
+    pending = next((req for req in access["requests"] if req["user_id"] == user_id), None)
+    if pending:
+        await update.message.reply_text("⏳ Your request is already pending.")
+    else:
+        # Add new request
+        access["requests"].append({
+            "user_id": user_id,
+            "username": username,
+            "timestamp": str(update.message.date)
+        })
+        save_access(access)
+        await update.message.reply_text("✅ Your request has been sent to admin.")
+
+    # Notify admin (regardless of duplicate)
     await context.bot.send_message(
         chat_id=access["owner"],
-        text=f"🆕 <b>Access Request: </b>\n\n"
-             f"User: {user.username or user.first_name} (@{user.username})\n"
-             f"ID: {user_id}\n"
-             f"Use /approve {user_id} or /decline {user_id}",
-             parse_mode="HTML"
+        text=(
+            f"🆕 <b>Access Request</b>\n\n"
+            f"User: {username} (@{user.username})\n"
+            f"ID: {user_id}\n"
+            f"Use /approve {user_id} or /decline {user_id}"
+        ),
+        parse_mode="HTML"
     )
+
+# async def request_access(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     user_id = str(update.effective_user.id)
+#     access = load_access()
     
-    await update.message.reply_text("✅ Your request has been sent to admin.")
+#     if user_id in access["users"]:
+#         await update.message.reply_text("✅ You already have access!")
+#         return
+    
+#     for req in access["requests"]:
+#         if req["user_id"] == user_id:
+#             await update.message.reply_text("⏳ Your request is already pending.")
+#             return
+    
+#     user = update.effective_user
+#     access["requests"].append({
+#         "user_id": user_id,
+#         "username": user.username or user.first_name,
+#         "timestamp": str(update.message.date)
+#     })
+#     save_access(access)
+    
+#     await context.bot.send_message(
+#         chat_id=access["owner"],
+#         text=f"🆕 <b>Access Request: </b>\n\n"
+#              f"User: {user.username or user.first_name} (@{user.username})\n"
+#              f"ID: {user_id}\n"
+#              f"Use /approve {user_id} or /decline {user_id}",
+#              parse_mode="HTML"
+#     )
+    
+#     await update.message.reply_text("✅ Your request has been sent to admin.")
 
 # = Approve/Decline User Commands ==========
 async def approve_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -404,7 +486,7 @@ async def approve_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if not context.args:
-        await update.message.reply_text("❗ Usage: /approve USER_ID or /decline USER_ID")
+        await update.message.reply_text("❗ Usage: <b>/approve USER_ID</b> or <b>/decline USER_ID</b>", parse_mode="HTML")
         return
     
     target_id = context.args[0]
@@ -426,7 +508,7 @@ async def approve_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     access["requests"].pop(request_idx)
     save_access(access)
     
-    await update.message.reply_text(f"✅ Approved access for user {target_id}")
+    await update.message.reply_text(f"✅ Approved access for user <b>{target_id}</b>", parse_mode="HTML")
     await context.bot.send_message(
         chat_id=int(target_id),
         text="🎉 <b> Your access has been approved! </b>\n\n"
@@ -435,8 +517,8 @@ async def approve_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Examples:\n"
             "<b>/add BTC 100000</b> - alert if price goes above 100000\n"
             "<b>/add BTC 100000 below</b> - alert if price drops below 100000\n\n"
-            "<b>Use /request_coin COIN</b> - to request more coins.\n"
-            "Use <b>/help</b> - to see all available commands."
+            "<b>Use /request_coin COIN</b> - to request more coins.\n\n"
+            "Use <b>/help</b> - to see all available commands.",parse_mode="HTML"
     )
 
 async def decline_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -448,7 +530,7 @@ async def decline_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if not context.args:
-        await update.message.reply_text("❗ Usage: /decline USER_ID")
+        await update.message.reply_text("❗ Usage: <b>/decline USER_ID</b>", parse_mode="HTML")
         return
     
     target_id = context.args[0]
@@ -482,7 +564,7 @@ async def request_coin_access(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
     
     if not context.args:
-        await update.message.reply_text("❗ Usage: /request_coin COIN")
+        await update.message.reply_text("❗ Usage: <b>/request_coin COIN</b>", parse_mode="HTML")
         return
     
     coin = context.args[0].lower()
@@ -491,12 +573,12 @@ async def request_coin_access(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
     
     if coin in access["users"][user_id]["coins"]:
-        await update.message.reply_text(f"✅ You already have access to {coin.upper()}.")
+        await update.message.reply_text(f"✅ You already have access to <b>{coin.upper()}.</b>", parse_mode="HTML")
         return
     
     for req in access["coin_requests"]:
         if req["user_id"] == user_id and req["coin"] == coin:
-            await update.message.reply_text(f"⏳ Your request for {coin.upper()} is pending.")
+            await update.message.reply_text(f"⏳ Your request for <b>{coin.upper()}</b> is pending.", parse_mode="HTML")
             return
     
     user = update.effective_user
@@ -518,7 +600,7 @@ async def request_coin_access(update: Update, context: ContextTypes.DEFAULT_TYPE
              parse_mode="HTML"
     )
     
-    await update.message.reply_text(f"✅ Request for {coin.upper()} sent to admin.")
+    await update.message.reply_text(f"✅ Request for <b>{coin.upper()}</b> sent to admin.",parse_mode="HTML")
 
 async def approve_coin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
@@ -529,7 +611,7 @@ async def approve_coin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if len(context.args) < 2:
-        await update.message.reply_text("❗ Usage: /approve_coin USER_ID COIN or /decline_coin USER_ID COIN")
+        await update.message.reply_text("❗ Usage: <b>/approve_coin USER_ID COIN</b> or <b>/decline_coin USER_ID COIN</b>", parse_mode="HTML")
         return
     
     target_id = context.args[0]
@@ -558,10 +640,10 @@ async def approve_coin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     access["coin_requests"].pop(request_idx)
     save_access(access)
     
-    await update.message.reply_text(f"✅ Approved {coin.upper()} for user {target_id}")
+    await update.message.reply_text(f"✅ Approved <b>{coin.upper()}</b> for user <b>{target_id}</b>", parse_mode="HTML")
     await context.bot.send_message(
         chat_id=int(target_id),
-        text=f"🎉 You now have access to {coin.upper()}!"
+        text=f"🎉 You now have access to <b>{coin.upper()}!</b>",parse_mode="HTML"
     )
 
 async def decline_coin(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -677,6 +759,7 @@ async def add_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
      
     await update.message.reply_text(f"✅ <b> Alert set for {symbol.upper()} ${price} ({direction})</b>\n\nYou will be notified when the price condition is met.", parse_mode="HTML")
 
+#list alerts
 async def list_alerts(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     access = load_access()
@@ -692,11 +775,13 @@ async def list_alerts(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("You have no active alerts.")
         return
     
-    msg = "📋 Your alerts:\n"
+    msg = "📋 <b>Your alerts:</b>\n\n"
     for i, alert in enumerate(user_alerts, start=1):
         msg += f"{i}. {alert['symbol'].upper()} {alert['direction']} ${alert['price']}\n"
-    await update.message.reply_text(msg)
+    await update.message.reply_text(msg,parse_mode="HTML")
 
+
+#remove alert
 async def remove_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     access = load_access()
@@ -706,7 +791,7 @@ async def remove_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if len(context.args) != 1 or not context.args[0].isdigit():
-        await update.message.reply_text("❗ Usage: /remove ALERT_NUMBER")
+        await update.message.reply_text("❗ Usage: <b>/remove ALERT_NUMBER</b>", parse_mode="HTML")
         return
     
     idx = int(context.args[0]) - 1
@@ -725,7 +810,7 @@ async def remove_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
     save_alerts(alerts)
     
     await update.message.reply_text(
-        f"✅ Removed alert for {removed['symbol'].upper()} ${removed['price']} ({removed['direction']})"
+        f"✅ Removed alert for <b>{removed['symbol'].upper()} ${removed['price']} ({removed['direction']})</b>", parse_mode="HTML"
     )
 
 # ========== COIN COMMAND ==========
@@ -742,7 +827,7 @@ async def coin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif user_id in access["users"]:
         accessible_coins = access["users"][user_id].get("coins", [])
         coins_list = "\n".join([f"• {c.upper()} ({SYMBOL_MAP.get(c, 'Unknown')})" for c in accessible_coins])
-        reply_lines.append(f"<b>📊 Your Coins:</b>\n{coins_list}")
+        reply_lines.append(f"<b>📊 Your Coins:</b>\n\n{coins_list}")
         reply_lines.append("\nUse <b>/request_coin COIN </b> to request more coins.")
     else:
         accessible_coins = []
