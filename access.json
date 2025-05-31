@@ -1,13 +1,6 @@
 {
   "owner": "5817239686",
-  "users": {
-    "7730733066": {
-      "coins": [
-        "btc"
-      ],
-      "username": "Tamim"
-    }
-  },
+  "users": {},
   "requests": [],
   "coin_requests": []
 }
