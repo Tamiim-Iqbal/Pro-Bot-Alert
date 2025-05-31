@@ -137,6 +137,7 @@ def save_access(data):
     except Exception as e:
         print(f"Error saving access: {e}")
 
+
 # ========== PING SERVER ==========
 class PingHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -207,7 +208,58 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "<b>/help</b> - to see all available commands.",
         parse_mode="HTML"
         )
+#############################################################################################
+async def remove_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    access = load_access()
+    if str(update.effective_user.id) != access.get("owner"):
+        await update.message.reply_text("Unauthorized.")
+        return
 
+    if not context.args:
+        await update.message.reply_text("Usage: /remove_user <USER_ID>")
+        return
+
+    user_id = context.args[0]
+    if user_id in access["users"]:
+        del access["users"][user_id]
+        save_access(access)
+        await update.message.reply_text(f"User {user_id} removed.")
+    else:
+        await update.message.reply_text(f"User {user_id} not found.")
+async def remove_coin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if len(context.args) < 2:
+        await update.message.reply_text("Usage: /remove_coin <USER_ID> <COIN>")
+        return
+
+    user_id = context.args[0]
+    coin = context.args[1].upper()
+
+    if str(update.effective_user.id) != OWNER_ID:
+        await update.message.reply_text("Unauthorized.")
+        return
+
+    if not os.path.exists(ALERT_FILE):
+        await update.message.reply_text("No alerts found.")
+        return
+
+    with open(ALERT_FILE, 'r') as f:
+        alerts = json.load(f)
+
+    if user_id not in alerts:
+        await update.message.reply_text(f"No alerts for user {user_id}.")
+        return
+
+    old_alerts = alerts[user_id]
+    alerts[user_id] = [a for a in old_alerts if a.get("symbol", "").upper() != coin]
+
+    if len(alerts[user_id]) < len(old_alerts):
+        with open(ALERT_FILE, 'w') as f:
+            json.dump(alerts, f, indent=2)
+        await update.message.reply_text(f"Removed {coin} from user {user_id}.")
+    else:
+        await update.message.reply_text(f"{coin} not found for user {user_id}.")
+
+#############################################################################################
 # Help command
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
@@ -914,7 +966,9 @@ async def main():
             ("list", list_alerts),
             ("remove", remove_alert),
             ("coin", coin_command),
-            ("price", get_price)
+            ("price", get_price),
+            ("remove_user", remove_user),
+            ("remove_coin", remove_coin)
         ]
         
         for cmd, handler in commands:
