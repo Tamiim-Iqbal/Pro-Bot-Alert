@@ -11,9 +11,6 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
 import json
 
-with open("serviceAccountKey.json") as f:
-    print(json.dumps(json.load(f)))
-
 # Load .env variables
 load_dotenv()
 
@@ -22,7 +19,6 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 PING_URL = os.getenv("PING_URL")
 
 # Firebase setup
-
 cred_json = os.getenv("FIREBASE_CREDENTIALS")
 if not cred_json:
     raise Exception("Missing FIREBASE_CREDENTIALS environment variable")
